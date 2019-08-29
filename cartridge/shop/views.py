@@ -68,14 +68,14 @@ def product(request, slug, template="shop/product.html",
                 request.cart.add_item(add_product_form.variation, quantity)
                 recalculate_cart(request)
                 info(request, _("Item added to cart"))
-                return redirect("shop_cart")
+                return redirect("shop:shop_cart")
             else:
                 skus = request.wishlist
                 sku = add_product_form.variation.sku
                 if sku not in skus:
                     skus.append(sku)
                 info(request, _("Item added to wishlist"))
-                response = redirect("shop_wishlist")
+                response = redirect("shop:shop_wishlist")
                 set_cookie(response, "wishlist", ",".join(skus))
                 return response
     related = []
@@ -123,12 +123,12 @@ def wishlist(request, template="shop/wishlist.html",
                 request.cart.add_item(add_product_form.variation, 1)
                 recalculate_cart(request)
                 message = _("Item added to cart")
-                url = "shop_cart"
+                url = "shop:shop_cart"
             else:
                 error = list(add_product_form.errors.values())[0]
         else:
             message = _("Item removed from wishlist")
-            url = "shop_wishlist"
+            url = "shop:shop_wishlist"
         sku = request.POST.get("sku")
         if sku in skus:
             skus.remove(sku)
@@ -199,7 +199,7 @@ def cart(request, template="shop/cart.html",
             # shipping details step where shipping is normally set.
             recalculate_cart(request)
         if valid:
-            return redirect("shop_cart")
+            return redirect("shop:shop_cart")
     context = {"cart_formset": cart_formset}
     context.update(extra_context or {})
     settings.clear_cache()
@@ -308,7 +308,7 @@ def checkout_steps(request, form_class=OrderForm, extra_context=None):
                     checkout.send_order_email(request, order)
                     # Set the cookie for remembering address details
                     # if the "remember" checkbox was checked.
-                    response = redirect("shop_complete")
+                    response = redirect("shop:shop_complete")
                     if form.cleaned_data.get("remember"):
                         remembered = "%s:%s" % (sign(order.key), order.key)
                         set_cookie(response, "remember", remembered,
@@ -435,5 +435,5 @@ def invoice_resend_email(request, order_id):
         if request.user.is_staff:
             redirect_to = reverse("admin:shop_order_change", args=[order_id])
         else:
-            redirect_to = reverse("shop_order_history")
+            redirect_to = reverse("shop:shop_order_history")
     return redirect(redirect_to)
