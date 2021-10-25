@@ -20,7 +20,7 @@ from django.utils.translation import (ugettext, ugettext_lazy as _,
                                       pgettext_lazy as __)
 
 from django.utils.encoding import force_text
-from django.utils.encoding import python_2_unicode_compatible
+from six import python_2_unicode_compatible
 
 from mezzanine.conf import settings
 from mezzanine.core.fields import FileField
