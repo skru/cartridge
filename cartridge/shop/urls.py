@@ -5,6 +5,7 @@ from mezzanine.conf import settings
 
 from cartridge.shop import views
 
+app_name = "shop"
 
 _slash = "/" if settings.APPEND_SLASH else ""
 

@@ -199,7 +199,7 @@ def cart(request, template="shop/cart.html",
             return redirect("shop:shop_cart")
     context = {"cart_formset": cart_formset}
     context.update(extra_context or {})
-    settings.clear_cache()
+    #settings.clear_cache()
     if (settings.SHOP_DISCOUNT_FIELD_IN_CART and
             DiscountCode.objects.active().exists()):
         context["discount_form"] = discount_form
@@ -216,7 +216,7 @@ def checkout_steps(request, form_class=OrderForm, extra_context=None):
     # login_required decorator. This means we can check for a custom
     # LOGIN_URL and fall back to our own login view.
     if settings.SHOP_CHECKOUT_ACCOUNT_REQUIRED and not request.user.is_authenticated:
-        url = "%s?next=%s" % (settings.LOGIN_URL, reverse("shop_checkout"))
+        url = "%s?next=%s" % (settings.LOGIN_URL, reverse("shop:shop_checkout"))
         return redirect(url)
 
     try:

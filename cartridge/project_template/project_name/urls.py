@@ -30,7 +30,7 @@ if settings.USE_MODELTRANSLATION:
 urlpatterns += [
 
     # Cartridge URLs.
-    url("^shop/", include("cartridge.shop.urls")),
+    url("^shop/", include("cartridge.shop.urls", namespace="shop")),
     url("^account/orders/$", order_history, name="shop_order_history"),
 
     # We don't want to presume how your homepage works, so here are a

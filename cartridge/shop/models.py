@@ -146,7 +146,7 @@ class Product(BaseProduct, Priced, RichText, ContentTyped, AdminThumbMixin):
             self.copy_price_fields_to(default)
 
     def get_absolute_url(self):
-        return reverse("shop_product", kwargs={"slug": self.slug})
+        return reverse("shop:shop_product", kwargs={"slug": self.slug})
 
     def copy_default_variation(self):
         """
