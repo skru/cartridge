@@ -1,11 +1,8 @@
-from __future__ import unicode_literals
-from future.builtins import int, str
-
 from json import dumps
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.messages import info
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.db.models import Sum
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect
@@ -218,8 +215,7 @@ def checkout_steps(request, form_class=OrderForm, extra_context=None):
     # Do the authentication check here rather than using standard
     # login_required decorator. This means we can check for a custom
     # LOGIN_URL and fall back to our own login view.
-    authenticated = request.user.is_authenticated()
-    if settings.SHOP_CHECKOUT_ACCOUNT_REQUIRED and not authenticated:
+    if settings.SHOP_CHECKOUT_ACCOUNT_REQUIRED and not request.user.is_authenticated:
         url = "%s?next=%s" % (settings.LOGIN_URL, reverse("shop_checkout"))
         return redirect(url)
 
