@@ -22,6 +22,9 @@ from django.utils.translation import ugettext_lazy as _
 # Setting to turn on featured images for shop categories. Defaults to False.
 # SHOP_CATEGORY_USE_FEATURED_IMAGE = True
 
+# Set an alternative OrderForm class for the checkout process.
+# SHOP_CHECKOUT_FORM_CLASS = 'cartridge.shop.forms.OrderForm'
+
 # If True, the checkout process is split into separate
 # billing/shipping and payment steps.
 # SHOP_CHECKOUT_STEPS_SPLIT = True
@@ -88,7 +91,7 @@ from django.utils.translation import ugettext_lazy as _
 #
 # ADMIN_MENU_ORDER = (
 #     ("Content", ("pages.Page", "blog.BlogPost",
-#        "generic.ThreadedComment", (_("Media Library"), "media-library"),)),
+#        "generic.ThreadedComment", (_("Media Library"), "fb_browse"),)),
 #     (_("Shop"), ("shop.Product", "shop.ProductOption", "shop.DiscountCode",
 #        "shop.Sale", "shop.Order")),
 #     ("Site", ("sites.Site", "redirects.Redirect", "conf.Setting")),
@@ -269,26 +272,22 @@ TEMPLATES = [
         "DIRS": [
             os.path.join(PROJECT_ROOT, "templates")
         ],
+        "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
-                "django.template.context_processors.debug",
-                "django.template.context_processors.i18n",
-                "django.template.context_processors.static",
-                "django.template.context_processors.media",
-                "django.template.context_processors.request",
-                "django.template.context_processors.tz",
+                "django.core.context_processors.debug",
+                "django.core.context_processors.i18n",
+                "django.core.context_processors.static",
+                "django.core.context_processors.media",
+                "django.core.context_processors.request",
+                "django.core.context_processors.tz",
                 "mezzanine.conf.context_processors.settings",
                 "mezzanine.pages.context_processors.page",
             ],
             "builtins": [
                 "mezzanine.template.loader_tags",
-            ],
-            "loaders": [
-                "mezzanine.template.loaders.host_themes.Loader",
-                "django.template.loaders.filesystem.Loader",
-                "django.template.loaders.app_directories.Loader",
             ],
         },
     },
@@ -322,13 +321,29 @@ INSTALLED_APPS = (
     "mezzanine.galleries",
     "mezzanine.twitter",
     # "mezzanine.accounts",
+    # "mezzanine.mobile",
 )
 
+# List of processors used by RequestContext to populate the context.
+# Each one should be a callable that takes the request object as its
+# only parameter and returns a dictionary to add to the context.
+TEMPLATE_CONTEXT_PROCESSORS = (
+    "django.contrib.auth.context_processors.auth",
+    "django.contrib.messages.context_processors.messages",
+    "django.core.context_processors.debug",
+    "django.core.context_processors.i18n",
+    "django.core.context_processors.static",
+    "django.core.context_processors.media",
+    "django.core.context_processors.request",
+    "django.core.context_processors.tz",
+    "mezzanine.conf.context_processors.settings",
+    "mezzanine.pages.context_processors.page",
+)
 
 # List of middleware classes to use. Order is important; in the request phase,
 # these middleware classes will be applied in the order given, and in the
 # response phase the middleware will be applied in reverse order.
-MIDDLEWARE = (
+MIDDLEWARE_CLASSES = (
     "mezzanine.core.middleware.UpdateCacheMiddleware",
 
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -344,16 +359,15 @@ MIDDLEWARE = (
     "cartridge.shop.middleware.ShopMiddleware",
     "mezzanine.core.request.CurrentRequestMiddleware",
     "mezzanine.core.middleware.RedirectFallbackMiddleware",
+    "mezzanine.core.middleware.TemplateForDeviceMiddleware",
+    "mezzanine.core.middleware.TemplateForHostMiddleware",
     "mezzanine.core.middleware.AdminLoginInterfaceSelectorMiddleware",
     "mezzanine.core.middleware.SitePermissionMiddleware",
+    # Uncomment the following if using any of the SSL settings:
+    # "mezzanine.core.middleware.SSLRedirectMiddleware",
     "mezzanine.pages.middleware.PageMiddleware",
     "mezzanine.core.middleware.FetchFromCacheMiddleware",
 )
-
-if DJANGO_VERSION < (1, 10):
-    MIDDLEWARE_CLASSES = MIDDLEWARE
-    del MIDDLEWARE
-
 
 # Store these package names here as they may change in the future since
 # at the moment we are using custom forks of them.

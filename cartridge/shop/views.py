@@ -9,6 +9,7 @@ from django.core.urlresolvers import reverse
 from django.db.models import Sum
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect
+from django.template import RequestContext
 from django.template.defaultfilters import slugify
 from django.template.loader import get_template
 from django.template.response import TemplateResponse
@@ -68,14 +69,14 @@ def product(request, slug, template="shop/product.html",
                 request.cart.add_item(add_product_form.variation, quantity)
                 recalculate_cart(request)
                 info(request, _("Item added to cart"))
-                return redirect("shop:shop_cart")
+                return redirect("shop_cart")
             else:
                 skus = request.wishlist
                 sku = add_product_form.variation.sku
                 if sku not in skus:
                     skus.append(sku)
                 info(request, _("Item added to wishlist"))
-                response = redirect("shop:shop_wishlist")
+                response = redirect("shop_wishlist")
                 set_cookie(response, "wishlist", ",".join(skus))
                 return response
     related = []
@@ -92,12 +93,7 @@ def product(request, slug, template="shop/product.html",
         "add_product_form": add_product_form
     }
     context.update(extra_context or {})
-
     templates = [u"shop/%s.html" % str(product.slug), template]
-    # Check for a template matching the page's content model.
-    if getattr(product, 'content_model', None) is not None:
-        templates.insert(0, u"shop/products/%s.html" % product.content_model)
-
     return TemplateResponse(request, templates, context)
 
 
@@ -123,12 +119,12 @@ def wishlist(request, template="shop/wishlist.html",
                 request.cart.add_item(add_product_form.variation, 1)
                 recalculate_cart(request)
                 message = _("Item added to cart")
-                url = "shop:shop_cart"
+                url = "shop_cart"
             else:
                 error = list(add_product_form.errors.values())[0]
         else:
             message = _("Item removed from wishlist")
-            url = "shop:shop_wishlist"
+            url = "shop_wishlist"
         sku = request.POST.get("sku")
         if sku in skus:
             skus.remove(sku)
@@ -199,10 +195,10 @@ def cart(request, template="shop/cart.html",
             # shipping details step where shipping is normally set.
             recalculate_cart(request)
         if valid:
-            return redirect("shop:shop_cart")
+            return redirect("shop_cart")
     context = {"cart_formset": cart_formset}
     context.update(extra_context or {})
-    settings.clear_cache()
+    settings.use_editable()
     if (settings.SHOP_DISCOUNT_FIELD_IN_CART and
             DiscountCode.objects.active().exists()):
         context["discount_form"] = discount_form
@@ -308,7 +304,7 @@ def checkout_steps(request, form_class=OrderForm, extra_context=None):
                     checkout.send_order_email(request, order)
                     # Set the cookie for remembering address details
                     # if the "remember" checkbox was checked.
-                    response = redirect("shop:shop_complete")
+                    response = redirect("shop_complete")
                     if form.cleaned_data.get("remember"):
                         remembered = "%s:%s" % (sign(order.key), order.key)
                         set_cookie(response, "remember", remembered,
@@ -372,7 +368,6 @@ def complete(request, template="shop/complete.html", extra_context=None):
     return TemplateResponse(request, template, context)
 
 
-@never_cache
 def invoice(request, order_id, template="shop/order_invoice.html",
             template_pdf="shop/order_invoice_pdf.html", extra_context=None):
     """
@@ -387,6 +382,7 @@ def invoice(request, order_id, template="shop/order_invoice.html",
     context = {"order": order}
     context.update(order.details_as_dict())
     context.update(extra_context or {})
+    context = RequestContext(request, context)
     if HAS_PDF and request.GET.get("format") == "pdf":
         response = HttpResponse(content_type="application/pdf")
         name = slugify("%s-invoice-%s" % (settings.SITE_TITLE, order.id))
@@ -415,7 +411,7 @@ def order_history(request, template="shop/order_history.html",
     return TemplateResponse(request, template, context)
 
 
-@never_cache
+@login_required
 def invoice_resend_email(request, order_id):
     """
     Re-sends the order complete email for the given order and redirects
@@ -427,7 +423,7 @@ def invoice_resend_email(request, order_id):
         raise Http404
     if request.method == "POST":
         checkout.send_order_email(request, order)
-        msg = _("The order email for order ID %s has been re-sent") % order_id
+        msg = _("The order email for order ID %s has been re-sent" % order_id)
         info(request, msg)
     # Determine the URL to return the user to.
     redirect_to = next_url(request)
@@ -435,5 +431,5 @@ def invoice_resend_email(request, order_id):
         if request.user.is_staff:
             redirect_to = reverse("admin:shop_order_change", args=[order_id])
         else:
-            redirect_to = reverse("shop:shop_order_history")
+            redirect_to = reverse("shop_order_history")
     return redirect(redirect_to)

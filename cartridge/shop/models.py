@@ -7,7 +7,7 @@ from functools import reduce
 from operator import iand, ior
 
 from django.core.exceptions import ValidationError
-from django.urls import reverse
+from django.core.urlresolvers import reverse
 from django.db import models, connection
 from django.db.models.signals import m2m_changed
 from django.db.models import CharField, Q, F
@@ -23,8 +23,7 @@ from django.utils.encoding import python_2_unicode_compatible
 from mezzanine.conf import settings
 from mezzanine.core.fields import FileField
 from mezzanine.core.managers import DisplayableManager
-from mezzanine.core.models import (
-    ContentTyped, Displayable, Orderable, RichText, SiteRelated)
+from mezzanine.core.models import Displayable, RichText, Orderable, SiteRelated
 from mezzanine.generic.fields import RatingField
 from mezzanine.pages.models import Page
 from mezzanine.utils.models import AdminThumbMixin, upload_to
@@ -89,20 +88,7 @@ class Priced(models.Model):
         obj_to.save()
 
 
-class BaseProduct(Displayable):
-    """
-    Exists solely to store ``DisplayableManager`` as the main manager.
-    If it's defined on ``Product``, a concrete model, then each
-    ``Product`` subclass loses the custom manager.
-    """
-
-    objects = DisplayableManager()
-
-    class Meta:
-        abstract = True
-
-
-class Product(BaseProduct, Priced, RichText, ContentTyped, AdminThumbMixin):
+class Product(Displayable, Priced, RichText, AdminThumbMixin):
     """
     Container model for a product that stores information common to
     all of its variations such as the product's title and description.
@@ -121,6 +107,8 @@ class Product(BaseProduct, Priced, RichText, ContentTyped, AdminThumbMixin):
                              verbose_name=_("Upsell products"), blank=True)
     rating = RatingField(verbose_name=_("Rating"))
 
+    objects = DisplayableManager()
+
     admin_thumb_field = "image"
 
     search_fields = {"variations__sku": 100}
@@ -136,7 +124,6 @@ class Product(BaseProduct, Priced, RichText, ContentTyped, AdminThumbMixin):
         ``SHOP_USE_VARIATIONS`` is False, and the product is
         updated via the admin change list.
         """
-        self.set_content_model()
         updating = self.id is not None
         super(Product, self).save(*args, **kwargs)
         if updating and not settings.SHOP_USE_VARIATIONS:
@@ -172,8 +159,7 @@ class ProductImage(Orderable):
     file = FileField(_("Image"), max_length=255, format="Image",
         upload_to=upload_to("shop.ProductImage.file", "product"))
     description = CharField(_("Description"), blank=True, max_length=100)
-    product = models.ForeignKey("Product", related_name="images",
-                                on_delete=models.CASCADE)
+    product = models.ForeignKey("Product", related_name="images")
 
     class Meta:
         verbose_name = _("Image")
@@ -230,8 +216,7 @@ class ProductVariation(with_metaclass(ProductVariationMetaclass, Priced)):
     ``SHOP_OPTION_TYPE_CHOICES`` for a ``Product`` instance.
     """
 
-    product = models.ForeignKey("Product", related_name="variations",
-                                on_delete=models.CASCADE)
+    product = models.ForeignKey("Product", related_name="variations")
     default = models.BooleanField(_("Default"), default=False)
     image = models.ForeignKey("ProductImage", verbose_name=_("Image"),
                               null=True, blank=True, on_delete=models.SET_NULL)
@@ -355,7 +340,7 @@ class Category(Page, RichText):
                                      verbose_name=_("Product options"),
                                      related_name="product_options")
     sale = models.ForeignKey("Sale", verbose_name=_("Sale"),
-                             blank=True, null=True, on_delete=models.CASCADE)
+                             blank=True, null=True)
     price_min = fields.MoneyField(_("Minimum price"), blank=True, null=True)
     price_max = fields.MoneyField(_("Maximum price"), blank=True, null=True)
     combined = models.BooleanField(_("Combined"), default=True,
@@ -544,7 +529,7 @@ class Order(SiteRelated):
         Returns the HTML for a link to the PDF invoice for use in the
         order listing view of the admin.
         """
-        url = reverse("shop:shop_invoice", args=(self.id,))
+        url = reverse("shop_invoice", args=(self.id,))
         text = ugettext("Download PDF invoice")
         return "<a href='%s?format=pdf'>%s</a>" % (url, text)
     invoice.allow_tags = True
@@ -677,28 +662,19 @@ class SelectedProduct(models.Model):
 
 class CartItem(SelectedProduct):
 
-    cart = models.ForeignKey("Cart", related_name="items",
-                             on_delete=models.CASCADE)
+    cart = models.ForeignKey("Cart", related_name="items")
     url = CharField(max_length=2000)
     image = CharField(max_length=200, null=True)
 
     def get_absolute_url(self):
         return self.url
 
-    def save(self, *args, **kwargs):
-        super(CartItem, self).save(*args, **kwargs)
-
-        # Check if this is the last cart item being removed
-        if self.quantity == 0 and not self.cart.items.exists():
-            self.cart.delete()
-
 
 class OrderItem(SelectedProduct):
     """
     A selected product in a completed order.
     """
-    order = models.ForeignKey("Order", related_name="items",
-                              on_delete=models.CASCADE)
+    order = models.ForeignKey("Order", related_name="items")
 
 
 class ProductAction(models.Model):
@@ -709,8 +685,7 @@ class ProductAction(models.Model):
     popularity and sales reporting.
     """
 
-    product = models.ForeignKey("Product", related_name="actions",
-                                on_delete=models.CASCADE)
+    product = models.ForeignKey("Product", related_name="actions")
     timestamp = models.IntegerField()
     total_cart = models.IntegerField(default=0)
     total_purchase = models.IntegerField(default=0)
